@@ -1166,9 +1166,19 @@ public class HoodieTableMetadataUtil {
     String fileName = FSUtils.getFileName(filePath, partitionPath);
 
     if (isDeleted) {
-      // TODO we should delete records instead of stubbing them
+      // we should delete records instead of stubbing them
       List<HoodieColumnRangeMetadata<Comparable>> columnRangeMetadataList = columnsToIndex.stream()
-          .map(entry -> HoodieColumnRangeMetadata.stub(fileName, entry))
+            .map(entry -> {
+              try {
+                  datasetMetaClient.getFs().delete(new Path(entry + fileName), true);
+                } catch (IOException e) {
+                LOG.error(String.format("file deleted failed, fileName: %s, filePath: %s", fileName, entry));
+                }
+                return entry;
+              })
+              .map(entry -> {
+                return HoodieColumnRangeMetadata.stub(fileName, entry);
+              })
           .collect(Collectors.toList());
 
       return HoodieMetadataPayload.createColumnStatsRecords(partitionPath, columnRangeMetadataList, true);
